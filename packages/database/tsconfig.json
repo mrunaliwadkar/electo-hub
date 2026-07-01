@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "commonjs",
+    "lib": ["es2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "declaration": true,
+    "types": ["node"]
+  },
+  "include": ["seed.ts", "index.ts", "src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/__tests__/**/*", "src/**/*.test.ts"]
+}

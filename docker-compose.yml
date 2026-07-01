@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: electrohub_db
+    environment:
+      POSTGRES_DB: electrohub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d electrohub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  typesense:
+    image: typesense/typesense:0.25.1
+    container_name: electrohub_search
+    environment:
+      TYPESENSE_DATA_DIR: /data
+      TYPESENSE_API_KEY: xyz123
+      TYPESENSE_ENABLE_CORS: "true"
+    ports:
+      - "8108:8108"
+    volumes:
+      - typesense_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8108/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: electrohub_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    container_name: electrohub_web
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/electrohub
+      - TYPESENSE_API_KEY=xyz123
+      - TYPESENSE_HOST=typesense
+      - TYPESENSE_PORT=8108
+      - TYPESENSE_PROTOCOL=http
+      - REDIS_URL=redis://redis:6379
+      - NEXTAUTH_SECRET=supersecretnextauthsecretkey12345
+      - NEXTAUTH_URL=http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      typesense:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ai
+    container_name: electrohub_ai
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/electrohub
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - POLL_INTERVAL=10
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  typesense_data:
+  redis_data:

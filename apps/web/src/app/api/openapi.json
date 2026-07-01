@@ -1,0 +1,446 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ElectroHub Backend API",
+    "description": "API documentation for ElectroHub - the Electronics Component & Circuit Intelligence Platform. Exposes component search, circuit browsing, project workspaces, BOM price optimization, favorites, and Gemini-based AI chat.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/api/auth/signin": {
+      "post": {
+        "summary": "User Sign In",
+        "description": "Authenticate user using email and password (NextAuth credentials provider). Sets session cookies.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "engineer@electrohub.com" },
+                  "password": { "type": "string", "format": "password", "example": "SecurePass123!" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Successfully authenticated" },
+          "401": { "description": "Invalid email or password" }
+        }
+      }
+    },
+    "/api/components": {
+      "get": {
+        "summary": "Search and Filter Components",
+        "description": "Proxies search queries to Typesense for instant, typo-tolerant parametric search. Includes SI unit normalization.",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Search query" },
+          { "name": "category", "in": "query", "schema": { "type": "string" }, "description": "Filter by category path" },
+          { "name": "manufacturer", "in": "query", "schema": { "type": "string" }, "description": "Filter by manufacturer name" },
+          { "name": "lifecycle", "in": "query", "schema": { "type": "string", "enum": ["ACTIVE", "NRND", "EOL", "OBSOLETE"] }, "description": "Filter by lifecycle status" },
+          { "name": "voltage_min", "in": "query", "schema": { "type": "number" }, "description": "Minimum voltage in Volts" },
+          { "name": "voltage_max", "in": "query", "schema": { "type": "number" }, "description": "Maximum voltage in Volts" },
+          { "name": "capacitance_min", "in": "query", "schema": { "type": "number" }, "description": "Minimum capacitance in Farads" },
+          { "name": "capacitance_max", "in": "query", "schema": { "type": "number" }, "description": "Maximum capacitance in Farads" },
+          { "name": "resistance_min", "in": "query", "schema": { "type": "number" }, "description": "Minimum resistance in Ohms" },
+          { "name": "resistance_max", "in": "query", "schema": { "type": "number" }, "description": "Maximum resistance in Ohms" },
+          { "name": "package_type", "in": "query", "schema": { "type": "string" }, "description": "Filter by package type" },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 }, "description": "Page number" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 }, "description": "Items per page" }
+        ],
+        "responses": {
+          "200": { "description": "Search results containing matches and facets" }
+        }
+      },
+      "post": {
+        "summary": "Create Component",
+        "description": "Add a new electronic component, its pinouts, and assets. Restricted to ADMIN.",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComponentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Component created successfully" },
+          "400": { "description": "Invalid payload" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/components/{id}": {
+      "get": {
+        "summary": "Get Component Details",
+        "description": "Retrieve detailed specifications, pinouts, CAD assets, datasheets, and pgvector-based alternatives for a specific component.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Detailed component data with alternatives" },
+          "404": { "description": "Component not found" }
+        }
+      },
+      "put": {
+        "summary": "Update Component",
+        "description": "Update component specifications, pinout table, or CAD assets. Restricted to ADMIN.",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComponentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Component updated successfully" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Component not found" }
+        }
+      },
+      "delete": {
+        "summary": "Delete Component",
+        "description": "Delete a component from the database and Typesense search index. Restricted to ADMIN.",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Component deleted successfully" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Component not found" }
+        }
+      }
+    },
+    "/api/circuits": {
+      "get": {
+        "summary": "Browse Circuits",
+        "description": "Browse and search verified sub-circuits and reference designs.",
+        "parameters": [
+          { "name": "difficulty", "in": "query", "schema": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced"] }, "description": "Filter by difficulty level" },
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Search query" }
+        ],
+        "responses": {
+          "200": { "description": "List of circuits" }
+        }
+      }
+    },
+    "/api/circuits/{id}": {
+      "get": {
+        "summary": "Get Circuit Details",
+        "description": "Retrieve detailed information for a specific circuit, including its bill of materials and schematic URL.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Detailed circuit data" },
+          "404": { "description": "Circuit not found" }
+        }
+      }
+    },
+    "/api/circuits/difficulty": {
+      "get": {
+        "summary": "Get Circuit Difficulty Levels",
+        "description": "Retrieve all available circuit difficulty levels.",
+        "responses": {
+          "200": { "description": "List of difficulty levels" }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "summary": "List Projects",
+        "description": "Retrieve all projects belonging to the logged-in user. Requires USER or ADMIN role.",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "List of user projects" },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Create Project",
+        "description": "Create a new project workspace. Requires USER or ADMIN role.",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "maxLength": 100 },
+                  "description": { "type": "string", "maxLength": 500 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Project created successfully" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/projects/{id}": {
+      "get": {
+        "summary": "Get Project Details",
+        "description": "Retrieve project metadata and the components added to it. Requires project ownership or ADMIN.",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Project details with components" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Project not found" }
+        }
+      },
+      "put": {
+        "summary": "Update Project or Manage Components",
+        "description": "Update project metadata, or add/update/remove components within this project workspace. Requires project ownership or ADMIN.",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "action": { "type": "string", "enum": ["add_component", "update_component", "remove_component"] },
+                  "componentId": { "type": "string", "format": "uuid" },
+                  "quantity": { "type": "integer", "minimum": 1 },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Project updated successfully" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Project or component not found" }
+        }
+      },
+      "delete": {
+        "summary": "Delete Project",
+        "description": "Delete a project workspace. Requires project ownership or ADMIN.",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Project deleted successfully" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Project not found" }
+        }
+      }
+    },
+    "/api/bom/optimize": {
+      "post": {
+        "summary": "Optimize BOM Sourcing",
+        "description": "Upload a CSV Bill of Materials (BOM), parse the component list, match parts via Typesense, and calculate the cheapest cart split across DigiKey, Mouser, and LCSC taking into account volume price breaks and shipping fee rules.",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary", "description": "CSV file containing columns for MPN and Quantity" },
+                  "projectId": { "type": "string", "format": "uuid", "description": "Optional Project ID to save the BOM optimization run" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Optimized cart splits and cost summary" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/favorites": {
+      "get": {
+        "summary": "List Favorites",
+        "description": "Retrieve all components marked as favorite by the logged-in user.",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "List of favorited components" },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Toggle Favorite Status",
+        "description": "Add or remove a component from the user's favorites.",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["componentId"],
+                "properties": {
+                  "componentId": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Toggle result indicating whether the component is now favorited" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/ai/chat": {
+      "post": {
+        "summary": "Stream AI Conversation",
+        "description": "Streams a chat response from Gemini Pro 1.5 using component-specific pinout, description, and spec context. Requires USER or ADMIN role.",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["componentId", "message"],
+                "properties": {
+                  "componentId": { "type": "string", "format": "uuid", "description": "The component ID to inject as system prompt context" },
+                  "message": { "type": "string", "description": "The user's chat message" },
+                  "history": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["role", "content"],
+                      "properties": {
+                        "role": { "type": "string", "enum": ["user", "assistant"] },
+                        "content": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Streams text/plain chunks",
+            "content": {
+              "text/plain": {
+                "schema": { "type": "string" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "next-auth.session-token"
+      }
+    },
+    "schemas": {
+      "ComponentCreate": {
+        "type": "object",
+        "required": ["mpn", "description", "manufacturerId", "categoryId"],
+        "properties": {
+          "mpn": { "type": "string", "example": "ESP32-S3-WROOM-1-N8R8" },
+          "description": { "type": "string", "example": "Powerful WiFi + Bluetooth MCU module" },
+          "manufacturerId": { "type": "string", "format": "uuid" },
+          "categoryId": { "type": "string", "format": "uuid" },
+          "lifecycle": { "type": "string", "enum": ["ACTIVE", "NRND", "EOL", "OBSOLETE"], "default": "ACTIVE" },
+          "specs": { "type": "object", "example": { "voltage_max": "3.6V", "frequency": "240MHz" } },
+          "pins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Pin"
+            }
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CadAsset"
+            }
+          }
+        }
+      },
+      "ComponentUpdate": {
+        "type": "object",
+        "properties": {
+          "mpn": { "type": "string" },
+          "description": { "type": "string" },
+          "manufacturerId": { "type": "string", "format": "uuid" },
+          "categoryId": { "type": "string", "format": "uuid" },
+          "lifecycle": { "type": "string", "enum": ["ACTIVE", "NRND", "EOL", "OBSOLETE"] },
+          "specs": { "type": "object" },
+          "pins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Pin"
+            }
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CadAsset"
+            }
+          }
+        }
+      },
+      "Pin": {
+        "type": "object",
+        "required": ["number", "name"],
+        "properties": {
+          "number": { "type": "string", "example": "1" },
+          "name": { "type": "string", "example": "GND" },
+          "type": { "type": "string", "enum": ["POWER", "GROUND", "INPUT", "OUTPUT", "BIDIRECT", "ANALOG", "PASSIVE"], "default": "PASSIVE" },
+          "functionalGroup": { "type": "string", "example": "GND" },
+          "color": { "type": "string", "example": "#000000" },
+          "description": { "type": "string", "example": "Ground pin" }
+        }
+      },
+      "CadAsset": {
+        "type": "object",
+        "required": ["type", "fileUrl"],
+        "properties": {
+          "type": { "type": "string", "enum": ["SYMBOL", "FOOTPRINT", "MODEL_3D"] },
+          "fileUrl": { "type": "string", "format": "uri", "example": "https://assets.electrohub.com/symbols/esp32.sym" },
+          "checksum": { "type": "string", "example": "sha256:d3f4..." }
+        }
+      }
+    }
+  }
+}

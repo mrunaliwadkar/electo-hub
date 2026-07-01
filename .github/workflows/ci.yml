@@ -1,0 +1,67 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-and-test:
+    name: Validate, Test, and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            packages/search/package-lock.json
+
+      - name: Install Database Dependencies
+        run: |
+          cd packages/database
+          npm ci
+
+      - name: Validate Prisma Schema
+        run: |
+          npx prisma validate --schema=packages/database/schema.prisma
+
+      - name: Install Search Dependencies & Run Tests
+        run: |
+          cd packages/search
+          npm ci
+          npm run test
+
+      - name: Install Web App Dependencies
+        run: |
+          cd apps/web
+          npm ci
+
+      - name: Generate Prisma Client for Web App
+        run: |
+          cd apps/web
+          npx prisma generate --schema=../../packages/database/schema.prisma
+
+      - name: Run Web App Linter
+        run: |
+          cd apps/web
+          npm run lint
+
+      - name: Build Next.js Web App
+        run: |
+          cd apps/web
+          npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/electrohub
+          TYPESENSE_API_KEY: xyz123
+          TYPESENSE_HOST: localhost
+          REDIS_URL: redis://localhost:6379
+          NEXTAUTH_SECRET: supersecretnextauthsecretkey

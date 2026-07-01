@@ -1,0 +1,20 @@
+{
+  "name": "@electrohub/search",
+  "version": "1.0.0",
+  "main": "normalization.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sync": "ts-node sync.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.15.0",
+    "typesense": "^1.8.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.14.2"
+  }
+}

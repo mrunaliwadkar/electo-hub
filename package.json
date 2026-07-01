@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "prisma": "^5.20.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0"
+  }
+}

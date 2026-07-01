@@ -1,0 +1,39 @@
+{
+  "name": "components",
+  "fields": [
+    { "name": "id", "type": "string" },
+    { "name": "mpn", "type": "string", "facet": false },
+    { "name": "description", "type": "string", "index": true },
+    { "name": "manufacturer", "type": "string", "facet": true },
+    { "name": "category", "type": "string", "facet": true },
+    { "name": "category_path", "type": "string[]", "facet": true },
+    { "name": "lifecycle", "type": "string", "facet": true },
+    { "name": "stock_total", "type": "int32", "facet": false },
+    { "name": "min_price", "type": "float", "facet": false },
+    
+    // Normalized Parametric Fields for Filtering
+    { "name": "normalized_voltage", "type": "float", "optional": true, "facet": false },
+    { "name": "normalized_capacitance", "type": "float", "optional": true, "facet": false },
+    { "name": "normalized_resistance", "type": "float", "optional": true, "facet": false },
+    { "name": "normalized_current", "type": "float", "optional": true, "facet": false },
+    { "name": "normalized_inductance", "type": "float", "optional": true, "facet": false },
+    { "name": "normalized_power", "type": "float", "optional": true, "facet": false },
+    { "name": "normalized_frequency", "type": "float", "optional": true, "facet": false },
+    
+    // Display Fields (for fast rendering without DB hits)
+    { "name": "voltage_display", "type": "string", "optional": true, "facet": false },
+    { "name": "capacitance_display", "type": "string", "optional": true, "facet": false },
+    { "name": "resistance_display", "type": "string", "optional": true, "facet": false },
+    { "name": "current_display", "type": "string", "optional": true, "facet": false },
+    { "name": "inductance_display", "type": "string", "optional": true, "facet": false },
+    { "name": "power_display", "type": "string", "optional": true, "facet": false },
+    { "name": "frequency_display", "type": "string", "optional": true, "facet": false },
+    
+    // Package and Assets
+    { "name": "package_type", "type": "string", "optional": true, "facet": true },
+    { "name": "has_cad_assets", "type": "bool", "facet": true },
+    { "name": "created_at", "type": "int64", "optional": true }
+  ],
+  "default_sorting_field": "stock_total",
+  "symbols_to_index": ["-", "/"]
+}

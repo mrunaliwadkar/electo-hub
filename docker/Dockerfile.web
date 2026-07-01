@@ -1,0 +1,59 @@
+# Stage 1: Install dependencies
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY apps/web/package.json apps/web/package-lock.json ./apps/web/
+COPY packages/database/package.json ./packages/database/
+COPY packages/search/package.json ./packages/search/
+
+# Install dependencies
+RUN cd apps/web && npm ci
+
+# Stage 2: Build the application
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+
+# Copy source files
+COPY apps/web ./apps/web
+COPY packages/database ./packages/database
+COPY packages/search ./packages/search
+
+# Generate Prisma Client
+RUN cd apps/web && npx prisma generate --schema=../../packages/database/schema.prisma
+
+# Build the Next.js application
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV production
+RUN cd apps/web && npm run build
+
+# Stage 3: Production runner
+FROM node:20-alpine AS runner
+WORKDIR /app/apps/web
+
+ENV NODE_ENV production
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED 1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built application and dependencies
+COPY --from=builder /app/apps/web/package.json ./package.json
+COPY --from=builder /app/apps/web/node_modules ./node_modules
+COPY --from=builder /app/apps/web/.next ./.next
+COPY --from=builder /app/apps/web/public ./public
+# Copy database package for Prisma schema access if needed at runtime
+COPY --from=builder /app/packages/database /app/packages/database
+COPY --from=builder /app/packages/search /app/packages/search
+
+USER nextjs
+
+EXPOSE 3000
+
+CMD ["npx", "next", "start"]
