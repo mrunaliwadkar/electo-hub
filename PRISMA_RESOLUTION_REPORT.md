@@ -51,12 +51,14 @@ During deployment (specifically in the `deploy-frontend` job inside `[.github/wo
 
 ## 3. Lowest-Risk Fix
 
-The lowest-risk and most robust fix is to add a `postinstall` script to `[apps/web/package.json](file:///d:/antigravity/electro%20hub/apps/web/package.json)`. 
+To force Prisma to generate the client into the local `apps/web/node_modules` directory, we need the generation command to be run in a context where the schema file is local to the `apps/web` package. 
+
+The most robust and cross-platform fix is to add a `postinstall` script in `[apps/web/package.json](file:///d:/antigravity/electro%20hub/apps/web/package.json)` that dynamically copies `schema.prisma` from the database package to `apps/web/schema.prisma`, executes `prisma generate`, and then cleans up the copied schema file.
 
 This guarantees that:
-1.  **Vercel / Next.js Build**: When Vercel CLI installs the dependencies, it automatically runs `prisma generate` with the correct schema reference prior to executing `next build`.
-2.  **Local Development**: When developers run `npm install` inside `apps/web`, the Prisma Client is generated automatically, eliminating manual developer steps.
-3.  **CI/CD Workflow**: Keeps the deployment workflows simple and eliminates the need to run manual `npm install` and `prisma generate` steps inside the CD runner.
+1.  **Vercel / Next.js Build**: When Vercel CLI installs the dependencies, it automatically runs the copy, generate, and cleanup tasks prior to executing `next build`, producing the client in the local `apps/web/node_modules`.
+2.  **Local Development**: When developers run `npm install` inside `apps/web`, the Prisma Client is generated automatically and locally.
+3.  **CI/CD Workflow**: Keeps the deployment workflows simple and clean.
 
 ### Code Implementation
 
@@ -69,6 +71,6 @@ Update the `scripts` block in `[apps/web/package.json](file:///d:/antigravity/el
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "postinstall": "prisma generate --schema=../../packages/database/schema.prisma"
+    "postinstall": "node -e \"const fs = require('fs'); fs.copyFileSync('../../packages/database/schema.prisma', 'schema.prisma');\" && prisma generate --schema=schema.prisma && node -e \"const fs = require('fs'); fs.unlinkSync('schema.prisma');\""
   },
 ```

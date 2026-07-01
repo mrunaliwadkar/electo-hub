@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "postinstall": "prisma generate --schema=../../packages/database/schema.prisma"
+    "postinstall": "node -e \"const fs = require('fs'); fs.copyFileSync('../../packages/database/schema.prisma', 'schema.prisma');\" && prisma generate --schema=schema.prisma && node -e \"const fs = require('fs'); fs.unlinkSync('schema.prisma');\""
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
