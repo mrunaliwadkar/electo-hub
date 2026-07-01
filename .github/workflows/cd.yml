@@ -24,7 +24,8 @@ jobs:
 
       - name: Run Prisma Migrations
         run: |
-          npx prisma migrate deploy --schema=packages/database/schema.prisma
+          npx prisma migrate deploy --schema=schema.prisma
+        working-directory: packages/database
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
 

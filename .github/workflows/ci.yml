@@ -31,7 +31,8 @@ jobs:
 
       - name: Validate Prisma Schema
         run: |
-          npx prisma validate --schema=packages/database/schema.prisma
+          npx prisma validate --schema=schema.prisma
+        working-directory: packages/database
 
       - name: Install Search Dependencies & Run Tests
         run: |
@@ -46,8 +47,8 @@ jobs:
 
       - name: Generate Prisma Client for Web App
         run: |
-          cd apps/web
           npx prisma generate --schema=../../packages/database/schema.prisma
+        working-directory: apps/web
 
       - name: Run Web App Linter
         run: |
