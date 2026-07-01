@@ -773,7 +773,7 @@ export default function ComponentDetailPage() {
                 {/* Fallback info card at bottom */}
                 <div className="absolute bottom-4 right-4 max-w-sm bg-card/85 backdrop-blur-md border border-border rounded-lg p-3 text-xs space-y-2 text-muted-foreground shadow-lg">
                   <p className="font-bold text-foreground flex items-center gap-1">
-                    <Info className="w-3.5 h-3.5 text-blue-500" /> Can't see the PDF viewer?
+                    <Info className="w-3.5 h-3.5 text-blue-500" /> Can&apos;t see the PDF viewer?
                   </p>
                   <p className="text-[11px] leading-normal">
                     Some browsers block embedded document viewers. You can access the datasheet directly at the official URL.
