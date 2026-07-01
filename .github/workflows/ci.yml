@@ -33,6 +33,8 @@ jobs:
         run: |
           npx prisma validate --schema=schema.prisma
         working-directory: packages/database
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/electrohub
 
       - name: Install Search Dependencies & Run Tests
         run: |
